@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
+from discord import Color, Embed
 import os
 from dotenv import load_dotenv
 load_dotenv()
@@ -40,6 +41,60 @@ async def on_ready():
         print(f"Синхронізовано {len(synced)} команд")
     except Exception as e:
         print(f"Помилка синхронізації: {e}")
+
+@bot.tree.command(name="embed", description="Create a beautiful custom embed", guild=discord.Object(id=GUILD_ID))
+@app_commands.describe(
+    title="Embed title",
+    description="Embed description",
+    color="Embed color in HEX (e.g. #3498db)",
+    url="URL for the title (optional)",
+    author_name="Author name (optional)",
+    author_icon="Author icon URL (optional)",
+    footer_text="Footer text (optional)",
+    footer_icon="Footer icon URL (optional)",
+    image_url="Image URL (optional)",
+    thumbnail_url="Thumbnail URL (optional)"
+)
+@is_admin()
+async def embed(
+    interaction: discord.Interaction,
+    title: str,
+    description: str,
+    color: str = "#3498db",
+    url: str = None,
+    author_name: str = None,
+    author_icon: str = None,
+    footer_text: str = None,
+    footer_icon: str = None,
+    image_url: str = None,
+    thumbnail_url: str = None
+):
+    # Конвертація кольору
+    try:
+        if color.startswith("#"):
+            color = color.lstrip("#")
+        color_int = int(color, 16)
+        embed_color = Color(color_int)
+    except Exception:
+        embed_color = Color.blue()  # колір за замовчуванням
+
+    embed = Embed(title=title, description=description, color=embed_color, url=url)
+
+    if author_name:
+        embed.set_author(name=author_name, icon_url=author_icon)
+
+    if footer_text:
+        embed.set_footer(text=footer_text, icon_url=footer_icon)
+
+    if image_url:
+        embed.set_image(url=image_url)
+
+    if thumbnail_url:
+        embed.set_thumbnail(url=thumbnail_url)
+
+    embed.timestamp = discord.utils.utcnow()
+
+    await interaction.response.send_message(embed=embed)
 
 # Команда очищення чату (тільки для адмінів)
 @bot.tree.command(name="clear", description="Очистити чат", guild=discord.Object(id=GUILD_ID))
