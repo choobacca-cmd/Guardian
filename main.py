@@ -41,6 +41,12 @@ async def on_ready():
         print(f"Синхронізовано {len(synced)} команд")
     except Exception as e:
         print(f"Помилка синхронізації: {e}")
+        
+@bot.event
+async def on_member_join(member):
+    default_role_id = 1396072475053265008 
+    role = member.guild.get_role(default_role_id)
+
 
 @bot.tree.command(name="embed", description="Create a beautiful custom embed", guild=discord.Object(id=GUILD_ID))
 @app_commands.describe(
