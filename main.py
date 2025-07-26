@@ -17,6 +17,8 @@ VOICE_CHANNEL_ROLES = {
     1396081549438353498: 1396079304386809970   # Канал 8 → Роль 8
 }
 
+default_role_id = 1396072475053265008 
+
 GUILD_ID = 1396069780766724186
 
 intents = discord.Intents.all()
@@ -44,7 +46,6 @@ async def on_ready():
         
 @bot.event
 async def on_member_join(member):
-    default_role_id = 1396072475053265008 
     role = member.guild.get_role(default_role_id)
 
 
