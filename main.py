@@ -1,7 +1,8 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from discord import Color, Embed
+from discord import Color, Embed, ButtonStyle
+from discord.ui import Button, View
 import os
 from dotenv import load_dotenv
 load_dotenv()
@@ -43,13 +44,41 @@ async def on_ready():
         print(f"Синхронізовано {len(synced)} команд")
     except Exception as e:
         print(f"Помилка синхронізації: {e}")
+
+class LanguageView(View):
+    def __init__(self, original_embed, russian_text, english_text):
+        super().__init__(timeout=None)
+        self.original_embed = original_embed
+        self.russian_text = russian_text
+        self.english_text = english_text
         
-@bot.event
-async def on_member_join(member):
-    role = member.guild.get_role(default_role_id)
+    @discord.ui.button(label="Русский", style=ButtonStyle.gray, emoji="🇷🇺")
+    async def russian_button(self, interaction: discord.Interaction, button: Button):
+        for field in self.russian_text['fields']:
+            self.original_embed.add_field(name=field['name'], value=field['value'], inline=field.get('inline', False))
+        
+        if 'image' in self.russian_text:
+            self.original_embed.set_image(url=self.russian_text['image'])
+        if 'thumbnail' in self.russian_text:
+            self.original_embed.set_thumbnail(url=self.russian_text['thumbnail'])
+            
+        self.original_embed.description = self.russian_text['description']
+        await interaction.response.edit_message(embed=self.original_embed)
+        
+    @discord.ui.button(label="English", style=ButtonStyle.gray, emoji="🇬🇧")
+    async def english_button(self, interaction: discord.Interaction, button: Button):
+        for field in self.english_text['fields']:
+            self.original_embed.add_field(name=field['name'], value=field['value'], inline=field.get('inline', False))
+        
+        if 'image' in self.english_text:
+            self.original_embed.set_image(url=self.english_text['image'])
+        if 'thumbnail' in self.english_text:
+            self.original_embed.set_thumbnail(url=self.english_text['thumbnail'])
+            
+        self.original_embed.description = self.english_text['description']
+        await interaction.response.edit_message(embed=self.original_embed)
 
-
-@bot.tree.command(name="embed", description="Create a beautiful custom embed", guild=discord.Object(id=GUILD_ID))
+@bot.tree.command(name="embed", description="Create a beautiful custom embed with language options", guild=discord.Object(id=GUILD_ID))
 @app_commands.describe(
     title="Embed title",
     description="Embed description",
@@ -60,7 +89,9 @@ async def on_member_join(member):
     footer_text="Footer text (optional)",
     footer_icon="Footer icon URL (optional)",
     image_url="Image URL (optional)",
-    thumbnail_url="Thumbnail URL (optional)"
+    thumbnail_url="Thumbnail URL (optional)",
+    russian_description="Russian version of description (optional)",
+    english_description="English version of description (optional)"
 )
 @is_admin()
 async def embed(
@@ -74,16 +105,18 @@ async def embed(
     footer_text: str = None,
     footer_icon: str = None,
     image_url: str = None,
-    thumbnail_url: str = None
+    thumbnail_url: str = None,
+    russian_description: str = None,
+    english_description: str = None
 ):
-    # Конвертація кольору
+    # Convert color
     try:
         if color.startswith("#"):
             color = color.lstrip("#")
         color_int = int(color, 16)
         embed_color = Color(color_int)
     except Exception:
-        embed_color = Color.blue()  # колір за замовчуванням
+        embed_color = Color.blue()
 
     embed = Embed(title=title, description=description, color=embed_color, url=url)
 
@@ -101,8 +134,27 @@ async def embed(
 
     embed.timestamp = discord.utils.utcnow()
 
-    await interaction.response.send_message(embed=embed)
-
+    # Prepare language options if provided
+    if russian_description or english_description:
+        # Default texts (use main description if language-specific not provided)
+        russian_text = {
+            'description': russian_description if russian_description else description,
+            'fields': [],
+            'image': image_url,
+            'thumbnail': thumbnail_url
+        }
+        
+        english_text = {
+            'description': english_description if english_description else description,
+            'fields': [],
+            'image': image_url,
+            'thumbnail': thumbnail_url
+        }
+        
+        view = LanguageView(embed, russian_text, english_text)
+        await interaction.response.send_message(embed=embed, view=view)
+    else:
+        await interaction.response.send_message(embed=embed)
 # Команда очищення чату (тільки для адмінів)
 @bot.tree.command(name="clear", description="Очистити чат", guild=discord.Object(id=GUILD_ID))
 @app_commands.describe(amount="Кількість повідомлень для видалення")
